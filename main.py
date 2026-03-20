@@ -16,6 +16,7 @@ RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 PURPLE = (128, 0, 128)
 GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, color):
@@ -38,8 +39,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, color, points, row, col):
         super().__init__()
         self.image = pygame.Surface((13, 13), pygame.SRCALPHA)
-        # Draw a simple triangular ship
-        pygame.draw.polygon(self.image, color, [(6, 0), (12, 12), (0, 12)])
+        self.draw_ship(color)
         self.rect = self.image.get_rect(topleft=(x, y))
         self.mask = pygame.mask.from_surface(self.image)
         self.points = points
@@ -53,6 +53,10 @@ class Enemy(pygame.sprite.Sprite):
         self.dive_vx = 0
         self.dive_vy = 0
         self.shoot_cooldown = 0
+
+    def draw_ship(self, color):
+        # Default simple triangular ship if not overridden
+        pygame.draw.polygon(self.image, color, [(6, 0), (12, 12), (0, 12)])
 
     def start_dive(self, escorts=None):
         self.state = Enemy.DIVING
@@ -127,17 +131,52 @@ class Drone(Enemy):
     def __init__(self, x, y, row, col):
         super().__init__(x, y, PURPLE, 30, row, col)
 
+    def draw_ship(self, color):
+        # Drone (Purple): Rounder, crab-like
+        pygame.draw.rect(self.image, color, (3, 2, 7, 7)) # Body
+        pygame.draw.rect(self.image, color, (1, 5, 2, 5)) # Left wing
+        pygame.draw.rect(self.image, color, (10, 5, 2, 5)) # Right wing
+        pygame.draw.rect(self.image, BLUE, (5, 4, 3, 2))  # Eye/Cockpit
+        pygame.draw.rect(self.image, color, (4, 9, 1, 2)) # Left leg
+        pygame.draw.rect(self.image, color, (8, 9, 1, 2)) # Right leg
+
 class Emissary(Enemy):
     def __init__(self, x, y, row, col):
         super().__init__(x, y, RED, 40, row, col)
+
+    def draw_ship(self, color):
+        # Emissary (Red): Angled wings, sharp
+        pygame.draw.rect(self.image, color, (5, 1, 3, 9))  # Central body
+        pygame.draw.polygon(self.image, color, [(5, 3), (0, 8), (5, 8)]) # Left wing
+        pygame.draw.polygon(self.image, color, [(8, 3), (13, 8), (8, 8)]) # Right wing
+        pygame.draw.rect(self.image, YELLOW, (6, 2, 1, 3)) # Detail
 
 class Hornet(Enemy):
     def __init__(self, x, y, row, col):
         super().__init__(x, y, YELLOW, 50, row, col)
 
+    def draw_ship(self, color):
+        # Hornet (Yellow): Bee-like
+        pygame.draw.rect(self.image, color, (4, 3, 5, 6))  # Body
+        pygame.draw.rect(self.image, BLACK, (4, 5, 5, 1)) # Stripe 1
+        pygame.draw.rect(self.image, BLACK, (4, 7, 5, 1)) # Stripe 2
+        pygame.draw.rect(self.image, RED, (2, 4, 2, 4))    # Left wing
+        pygame.draw.rect(self.image, RED, (9, 4, 2, 4))    # Right wing
+        pygame.draw.rect(self.image, color, (6, 0, 1, 3))  # Stinger/Tip
+
 class Flagship(Enemy):
     def __init__(self, x, y, row, col):
         super().__init__(x, y, WHITE, 60, row, col)
+
+    def draw_ship(self, color):
+        # Flagship (White): Largest looking, crown-like
+        pygame.draw.rect(self.image, color, (3, 4, 7, 6))  # Main body
+        pygame.draw.rect(self.image, BLUE, (5, 5, 3, 3))   # Core
+        pygame.draw.rect(self.image, color, (1, 6, 2, 4))  # Left pod
+        pygame.draw.rect(self.image, color, (10, 6, 2, 4)) # Right pod
+        pygame.draw.rect(self.image, RED, (5, 1, 3, 3))    # Top ornament
+        pygame.draw.rect(self.image, color, (0, 8, 1, 3))  # Left tip
+        pygame.draw.rect(self.image, color, (12, 8, 1, 3)) # Right tip
 
     def start_dive(self, escorts=[]):
         super().start_dive(escorts)
@@ -175,9 +214,22 @@ class Explosion(pygame.sprite.Sprite):
 class Galaxip(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((15, 15), pygame.SRCALPHA)
-        # Draw a simple ship shape
-        pygame.draw.polygon(self.image, GREEN, [(7, 0), (14, 14), (0, 14)])
+        # Galaxip size is roughly 13x13 or 15x15
+        self.image = pygame.Surface((13, 13), pygame.SRCALPHA)
+        
+        # Red Wings
+        pygame.draw.rect(self.image, RED, (0, 7, 3, 5))   # Left wing
+        pygame.draw.rect(self.image, RED, (10, 7, 3, 5))  # Right wing
+        pygame.draw.rect(self.image, RED, (3, 10, 7, 2))  # Bottom connector
+        
+        # Blue Accents
+        pygame.draw.rect(self.image, BLUE, (3, 6, 2, 4))  # Left blue
+        pygame.draw.rect(self.image, BLUE, (8, 6, 2, 4))  # Right blue
+        
+        # White Body/Cockpit
+        pygame.draw.rect(self.image, WHITE, (5, 2, 3, 8)) # Center body
+        pygame.draw.rect(self.image, WHITE, (6, 0, 1, 2)) # Tip
+        
         self.rect = self.image.get_rect(midbottom=(VIRTUAL_WIDTH // 2, VIRTUAL_HEIGHT - 10))
         self.mask = pygame.mask.from_surface(self.image)
         self.speed = 2
@@ -242,6 +294,17 @@ class Game:
         self.enemy_bullets = pygame.sprite.Group()
         self.explosions = pygame.sprite.Group()
         
+        # Sound effects
+        self.sounds = {}
+        try:
+            self.sounds['explosion'] = pygame.mixer.Sound('explosion.wav')
+            self.sounds['fire'] = pygame.mixer.Sound('fire.wav')
+            self.sounds['enemy_fire'] = pygame.mixer.Sound('enemy_fire.wav')
+            self.sounds['startup'] = pygame.mixer.Sound('startup.wav')
+            self.sounds['gameover'] = pygame.mixer.Sound('gameover.wav')
+        except:
+            pass
+
         self.player = Galaxip()
         self.all_sprites.add(self.player)
         
@@ -298,17 +361,23 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if self.state == "START":
                     self.state = "PLAYING"
+                    if 'startup' in self.sounds:
+                        self.sounds['startup'].play()
                 elif self.state == "GAME_OVER":
                     self.score = 0
                     self.level = 1
                     self.player.lives = 3
                     self.create_enemies()
                     self.state = "PLAYING"
+                    if 'startup' in self.sounds:
+                        self.sounds['startup'].play()
                 elif self.state == "PLAYING":
                     if event.key == pygame.K_SPACE:
                         if self.player.cooldown == 0 and len(self.player_bullets) < 1:
                             bullet = self.player.shoot()
                             if bullet:
+                                if 'fire' in self.sounds:
+                                    self.sounds['fire'].play()
                                 self.player_bullets.add(bullet)
                                 self.all_sprites.add(bullet, layer=1)
 
@@ -353,6 +422,8 @@ class Game:
         for enemy in self.enemies:
             bullet = enemy.shoot()
             if bullet:
+                if 'enemy_fire' in self.sounds:
+                    self.sounds['enemy_fire'].play()
                 self.enemy_bullets.add(bullet)
                 self.all_sprites.add(bullet, layer=1)
 
@@ -365,14 +436,18 @@ class Game:
            pygame.sprite.spritecollideany(self.player, self.enemy_bullets, pygame.sprite.collide_mask):
             # Player hit
             self.player.lives -= 1
+            if 'explosion' in self.sounds:
+                self.sounds['explosion'].play()
             if self.player.lives <= 0:
                 self.state = "GAME_OVER"
+                if 'gameover' in self.sounds:
+                    self.sounds['gameover'].play()
                 if self.score > self.high_score:
                     self.high_score = self.score
             else:
                 for b in self.enemy_bullets: b.kill()
                 self.player.rect.midbottom = (VIRTUAL_WIDTH // 2, VIRTUAL_HEIGHT - 10)
-                expl = Explosion(self.player.rect.centerx, self.player.rect.centery, GREEN)
+                expl = Explosion(self.player.rect.centerx, self.player.rect.centery, WHITE)
                 self.explosions.add(expl)
                 self.all_sprites.add(expl)
         
@@ -394,6 +469,8 @@ class Game:
             self.score += points
             
             # Create explosion
+            if 'explosion' in self.sounds:
+                self.sounds['explosion'].play()
             expl = Explosion(enemy.rect.centerx, enemy.rect.centery, enemy.color if hasattr(enemy, 'color') else PURPLE)
             enemy.kill() # Now manually killing after points logic
             self.explosions.add(expl)
